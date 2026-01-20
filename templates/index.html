@@ -1,0 +1,879 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spam Email Detection System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px 10px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        /* Compact Header */
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 25px;
+        }
+
+        .header h1 {
+            font-size: 2.2em;
+            margin-bottom: 5px;
+            text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+
+        .header p {
+            font-size: 0.95em;
+            opacity: 0.9;
+        }
+
+        /* Main Layout */
+        .main-wrapper {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 16px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+        }
+
+        .card h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.5em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Tabs */
+        .tab-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 12px;
+            background: transparent;
+            border: none;
+            border-bottom: 3px solid transparent;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab-btn.active {
+            color: #667eea;
+            border-bottom-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        /* Input Area */
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+        }
+
+        textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 120px;
+            font-family: inherit;
+            transition: all 0.3s;
+        }
+
+        textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed #d0d0d0;
+            border-radius: 12px;
+            padding: 30px 20px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s;
+            cursor: pointer;
+        }
+
+        .upload-area:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.05);
+        }
+
+        .upload-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .upload-text {
+            font-size: 1em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .upload-subtext {
+            color: #999;
+            font-size: 0.85em;
+            margin-bottom: 15px;
+        }
+
+        .btn-upload {
+            padding: 10px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-upload:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+
+        /* Image Preview */
+        .image-preview {
+            margin-top: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 15px;
+            background: white;
+        }
+
+        .preview-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .preview-header h4 {
+            color: #667eea;
+            font-size: 1.1em;
+            margin: 0;
+        }
+
+        .btn-remove {
+            padding: 8px 16px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.85em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-remove:hover {
+            background: #dc2626;
+        }
+
+        #previewImg {
+            width: 100%;
+            max-height: 250px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid #e0e0e0;
+        }
+
+        .extracted-text {
+            margin-top: 15px;
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+
+        .extracted-text h5 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 0.95em;
+        }
+
+        .extracted-text p {
+            color: #333;
+            line-height: 1.6;
+            font-size: 0.9em;
+        }
+
+        .scanner-status {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px;
+            background: #e0f2fe;
+            border-radius: 8px;
+            color: #0369a1;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .spinner-small {
+            width: 18px;
+            height: 18px;
+            border: 3px solid #bfdbfe;
+            border-top: 3px solid #0369a1;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        /* Buttons */
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        button {
+            flex: 1;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: white;
+            color: #667eea;
+            border: 2px solid #667eea;
+        }
+
+        .btn-secondary:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        /* Loading */
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 0.8s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Result */
+        .result {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 12px;
+            display: none;
+        }
+
+        .result.spam {
+            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
+            border: 2px solid #ef4444;
+        }
+
+        .result.ham {
+            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
+            border: 2px solid #10b981;
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .result-icon {
+            font-size: 2.5em;
+        }
+
+        .result-text h3 {
+            font-size: 1.3em;
+            margin-bottom: 5px;
+        }
+
+        .result-text p {
+            font-size: 0.95em;
+        }
+
+        .confidence-bar {
+            background: rgba(255,255,255,0.6);
+            height: 30px;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+
+        .confidence-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: 600;
+            font-size: 14px;
+            transition: width 1s;
+        }
+
+        /* Samples */
+        .samples {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+
+        .sample-btn {
+            padding: 10px;
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 0.85em;
+            font-weight: 600;
+            text-align: left;
+        }
+
+        .sample-btn:hover {
+            border-color: #667eea;
+            background: rgba(102, 126, 234, 0.1);
+            transform: translateY(-2px);
+        }
+
+        /* Stats Sidebar */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-card h4 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+
+        .stat-card p {
+            opacity: 0.9;
+            font-size: 0.85em;
+        }
+
+        .data-flow {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 0.85em;
+            line-height: 1.7;
+        }
+
+        .data-flow strong {
+            color: #667eea;
+        }
+
+        /* History Table */
+        .history-section {
+            margin-top: 20px;
+        }
+
+        .history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .btn-danger {
+            padding: 10px 20px;
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.9em;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+            overflow: hidden;
+            border-radius: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .history-table th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            font-size: 0.9em;
+        }
+
+        .history-table td {
+            padding: 12px;
+            border-bottom: 1px solid #e0e0e0;
+            background: white;
+            font-size: 0.9em;
+        }
+
+        .history-table tr:hover td {
+            background: #f8f9fa;
+        }
+
+        .badge {
+            padding: 5px 12px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            font-weight: 600;
+            display: inline-block;
+        }
+
+        .badge.spam {
+            background: #fee2e2;
+            color: #dc2626;
+        }
+
+        .badge.ham {
+            background: #d1fae5;
+            color: #059669;
+        }
+
+        /* Responsive */
+        @media (max-width: 968px) {
+            .main-wrapper {
+                grid-template-columns: 1fr;
+            }
+            .header h1 {
+                font-size: 1.8em;
+            }
+            .samples {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Spam Email Detection</h1>
+            <p>AI-Powered Email Classification | 97% Accuracy</p>
+        </div>
+
+        <div class="main-wrapper">
+            <!-- Left: Main Analysis Card -->
+            <div class="card">
+                <h2>🔍 Email Analysis</h2>
+                
+                <div class="tab-container">
+                    <button class="tab-btn active" onclick="switchTab('text', event)">📝 Text Input</button>
+                    <button class="tab-btn" onclick="switchTab('image', event)">📷 Image Scanner</button>
+                </div>
+
+                <div id="textTab" class="tab-content active">
+                    <div class="input-group">
+                        <label for="messageInput">Enter email content:</label>
+                        <textarea id="messageInput" placeholder="Type or paste your email message here..."></textarea>
+                    </div>
+                </div>
+
+                <div id="imageTab" class="tab-content">
+                    <div class="input-group">
+                        <label>Upload Email Screenshot:</label>
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">📸</div>
+                            <p class="upload-text">Drop image here or click to browse</p>
+                            <p class="upload-subtext">JPG, PNG, JPEG (Max 5MB)</p>
+                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                            <button class="btn-upload" onclick="document.getElementById('imageInput').click()">
+                                📂 Select Image
+                            </button>
+                        </div>
+                        <div id="imagePreview" class="image-preview" style="display: none;">
+                            <div class="preview-header">
+                                <h4>📷 Preview</h4>
+                                <button class="btn-remove" onclick="removeImage()">🗑️ Remove</button>
+                            </div>
+                            <img id="previewImg" src="" alt="Preview">
+                            <div id="extractedText" class="extracted-text"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="classifyMessage()">🚀 Analyze Email</button>
+                    <button class="btn-secondary" onclick="clearInput()">🔄 Clear</button>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: #667eea; font-weight: 600;">Analyzing...</p>
+                </div>
+
+                <div class="result" id="result"></div>
+
+                <div style="margin-top: 20px;">
+                    <p style="color: #666; font-weight: 600; margin-bottom: 10px; font-size: 0.9em;">📝 Try samples:</p>
+                    <div class="samples">
+                        <button class="sample-btn" onclick="useSample('Congratulations! You won $1000000. Click here to claim now!')">
+                            🎰 Win $1M
+                        </button>
+                        <button class="sample-btn" onclick="useSample('Hey, can we meet tomorrow at 3 PM for coffee?')">
+                            ☕ Coffee Meeting
+                        </button>
+                        <button class="sample-btn" onclick="useSample('FREE GIFT! Reply YES to claim your iPhone 15 Pro Max now!')">
+                            📱 Free iPhone
+                        </button>
+                        <button class="sample-btn" onclick="useSample('Please review the attached project report and share your feedback.')">
+                            📄 Project Report
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right: Stats Sidebar -->
+            <div>
+                <div class="card">
+                    <h2>📊 Statistics</h2>
+                    
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <h4 id="totalCount">0</h4>
+                            <p>Total</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4 id="spamCount">0</h4>
+                            <p>Spam</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4 id="hamCount">0</h4>
+                            <p>Safe</p>
+                        </div>
+                        <div class="stat-card">
+                            <h4>97%</h4>
+                            <p>Accuracy</p>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 20px;">
+                        <h3 style="color: #667eea; margin-bottom: 12px; font-size: 1.1em;">🔧 System Flow</h3>
+                        <div class="data-flow">
+                            <strong>1.</strong> User Input<br>
+                            <strong>2.</strong> Text Preprocessing<br>
+                            <strong>3.</strong> ML Classification<br>
+                            <strong>4.</strong> Result Display
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- History Section -->
+        <div class="card history-section">
+            <div class="history-header">
+                <h2>📜 History</h2>
+                <button class="btn-danger" onclick="clearHistory()">🗑️ Clear</button>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Email Content</th>
+                            <th>Result</th>
+                            <th>Confidence</th>
+                            <th>Time</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #999; padding: 30px;">
+                                No emails analyzed yet
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentTab = 'text';
+        let uploadedImage = null;
+        let extractedEmailText = '';
+
+        function switchTab(tab, event) {
+            currentTab = tab;
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            document.getElementById(tab === 'text' ? 'textTab' : 'imageTab').classList.add('active');
+            document.getElementById('result').style.display = 'none';
+        }
+
+        const imageInput = document.getElementById('imageInput');
+        const uploadArea = document.getElementById('uploadArea');
+        const imagePreview = document.getElementById('imagePreview');
+        const previewImg = document.getElementById('previewImg');
+
+        imageInput.addEventListener('change', handleImageSelect);
+        uploadArea.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('btn-upload')) imageInput.click();
+        });
+
+        function handleImageSelect(e) {
+            const file = e.target.files[0];
+            if (file) handleImageFile(file);
+        }
+
+        function handleImageFile(file) {
+            if (!file.type.startsWith('image/')) {
+                alert('Please upload a valid image file');
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                alert('File size must be less than 5MB');
+                return;
+            }
+            uploadedImage = file;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                previewImg.src = e.target.result;
+                uploadArea.style.display = 'none';
+                imagePreview.style.display = 'block';
+                extractTextFromImage();
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function extractTextFromImage() {
+            const extractedTextDiv = document.getElementById('extractedText');
+            extractedTextDiv.innerHTML = '<div class="scanner-status"><div class="spinner-small"></div> Scanning...</div>';
+            Tesseract.recognize(previewImg.src, 'eng', {
+                logger: (m) => {
+                    if (m.status === 'recognizing text') {
+                        const progress = Math.round(m.progress * 100);
+                        extractedTextDiv.innerHTML = `<div class="scanner-status"><div class="spinner-small"></div> ${progress}%</div>`;
+                    }
+                }
+            }).then(({ data: { text } }) => {
+                if (text.trim()) {
+                    extractedEmailText = text.trim();
+                    extractedTextDiv.innerHTML = `<h5>✅ Text Extracted</h5><p>${extractedEmailText}</p>`;
+                } else {
+                    extractedTextDiv.innerHTML = '<div style="color: #ef4444;"><h5>⚠️ No text detected</h5></div>';
+                }
+            }).catch(err => {
+                extractedTextDiv.innerHTML = '<div style="color: #ef4444;"><h5>❌ Extraction Failed</h5></div>';
+            });
+        }
+
+        function removeImage() {
+            uploadedImage = null;
+            extractedEmailText = '';
+            imageInput.value = '';
+            uploadArea.style.display = 'block';
+            imagePreview.style.display = 'none';
+            document.getElementById('result').style.display = 'none';
+        }
+
+        function useSample(text) {
+            document.getElementById('messageInput').value = text;
+            document.querySelectorAll('.tab-btn')[0].click();
+        }
+
+        function clearInput() {
+            document.getElementById('messageInput').value = '';
+            document.getElementById('result').style.display = 'none';
+        }
+
+        async function classifyMessage() {
+            let message = currentTab === 'text' ? document.getElementById('messageInput').value.trim() : extractedEmailText;
+            if (!message) {
+                alert('Please enter an email to analyze!');
+                return;
+            }
+
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+
+            try {
+                const response = await fetch('/api/predict', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({ message })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    alert('Error: ' + data.error);
+                    document.getElementById('loading').style.display = 'none';
+                    return;
+                }
+
+                document.getElementById('loading').style.display = 'none';
+                const isSpam = data.prediction === 'spam';
+                const confidence = data.confidence;
+
+                const resultDiv = document.getElementById('result');
+                resultDiv.className = 'result ' + (isSpam ? 'spam' : 'ham');
+                resultDiv.innerHTML = `
+                    <div class="result-header">
+                        <div class="result-icon">${isSpam ? '⚠️' : '✅'}</div>
+                        <div class="result-text">
+                            <h3>${isSpam ? 'SPAM DETECTED' : 'SAFE EMAIL'}</h3>
+                            <p>${isSpam ? 'This email appears to be spam' : 'This email appears legitimate'}</p>
+                        </div>
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill" style="width: ${confidence}%">${confidence.toFixed(1)}%</div>
+                    </div>
+                `;
+                resultDiv.style.display = 'block';
+                loadStats();
+                loadHistory();
+            } catch (error) {
+                alert('Failed to classify message');
+                document.getElementById('loading').style.display = 'none';
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+                document.getElementById('totalCount').textContent = data.total;
+                document.getElementById('spamCount').textContent = data.spam;
+                document.getElementById('hamCount').textContent = data.ham;
+            } catch (error) {
+                console.error('Error loading stats:', error);
+            }
+        }
+
+        async function loadHistory() {
+            try {
+                const response = await fetch('/api/history');
+                const data = await response.json();
+                const tbody = document.getElementById('historyBody');
+                
+                if (data.history.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: #999; padding: 30px;">No emails analyzed yet</td></tr>';
+                    return;
+                }
+
+                tbody.innerHTML = data.history.map(item => `
+                    <tr>
+                        <td>${item.message.substring(0, 60)}${item.message.length > 60 ? '...' : ''}</td>
+                        <td><span class="badge ${item.prediction}">${item.prediction.toUpperCase()}</span></td>
+                        <td>${item.confidence.toFixed(1)}%</td>
+                        <td>${item.timestamp}</td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                console.error('Error loading history:', error);
+            }
+        }
+
+        async function clearHistory() {
+            if (!confirm('Clear all history?')) return;
+            try {
+                await fetch('/api/clear', { method: 'DELETE' });
+                loadStats();
+                loadHistory();
+            } catch (error) {
+                alert('Failed to clear history');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadStats();
+            loadHistory();
+        });
+    </script>
+</body>
+</html>

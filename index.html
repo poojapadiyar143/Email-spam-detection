@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spam Email Detection System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tesseract.js/4.1.1/tesseract.min.js"></script>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div id="particles"></div>
+
+    <div class="container">
+        <div class="header">
+            <h1>ðŸ“§ Spam Email Detection System</h1>
+            <p>Powered by Machine Learning | 97% Accuracy | Real-time Email Classification</p>
+        </div>
+
+        <div class="main-grid">
+            <div class="card">
+                <h2><span class="icon">ðŸ”</span> Email Analysis</h2>
+                
+                <div class="tab-container">
+                    <button class="tab-btn active" onclick="switchTab('text', event)">
+                        ðŸ“ Text Input
+                    </button>
+                    <button class="tab-btn" onclick="switchTab('image', event)">
+                        ðŸ“· Image Scanner
+                    </button>
+                </div>
+
+                <div id="textTab" class="tab-content active">
+                    <div class="input-group">
+                        <label for="messageInput">Enter your email content:</label>
+                        <textarea id="messageInput" placeholder="Type or paste your email message here..."></textarea>
+                    </div>
+                </div>
+
+                <div id="imageTab" class="tab-content">
+                    <div class="input-group">
+                        <label>Upload Email Screenshot:</label>
+                        <div class="upload-area" id="uploadArea">
+                            <div class="upload-icon">ðŸ“¸</div>
+                            <p class="upload-text">Drop your screenshot here or click to browse</p>
+                            <p class="upload-subtext">Supports: JPG, PNG, JPEG (Max 5MB)</p>
+                            <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                            <button class="btn-upload" onclick="document.getElementById('imageInput').click()">
+                                ðŸ“‚ Select Image
+                            </button>
+                        </div>
+                        <div id="imagePreview" class="image-preview" style="display: none;">
+                            <div class="preview-header">
+                                <h4>ðŸ“· Preview</h4>
+                                <button class="btn-remove" onclick="removeImage()">ðŸ—‘ï¸ Remove</button>
+                            </div>
+                            <img id="previewImg" src="" alt="Preview">
+                            <div id="extractedText" class="extracted-text"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="button-group">
+                    <button class="btn-primary" onclick="classifyMessage()">
+                        ðŸš€ Analyze Email
+                    </button>
+                    <button class="btn-secondary" onclick="clearInput()">
+                        ðŸ”„ Clear
+                    </button>
+                </div>
+
+                <div class="loading" id="loading">
+                    <div class="spinner"></div>
+                    <p style="margin-top: 10px; color: #667eea;">Analyzing email...</p>
+                </div>
+
+                <div class="result" id="result"></div>
+
+                <div style="margin-top: 20px;">
+                    <p style="color: #666; font-weight: 600; margin-bottom: 10px;">ðŸ“ Try sample emails:</p>
+                    <div class="samples">
+                        <button class="sample-btn" onclick="useSample('Congratulations! You won $1000000. Click here to claim now!')">
+                            ðŸŽ° Win $1M (Spam Email)
+                        </button>
+                        <button class="sample-btn" onclick="useSample('Hey, can we meet tomorrow at 3 PM for coffee?')">
+                            â˜• Coffee Meeting (Ham Email)
+                        </button>
+                        <button class="sample-btn" onclick="useSample('FREE GIFT! Reply YES to claim your iPhone 15 Pro Max now!')">
+                            ðŸ“± Free iPhone (Spam Email)
+                        </button>
+                        <button class="sample-btn" onclick="useSample('Please review the attached project report and share your feedback.')">
+                            ðŸ“„ Project Report (Ham Email)
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">ðŸ“Š</span> System Statistics</h2>
+                
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <h4 id="totalCount">0</h4>
+                        <p>Total Analyzed</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4 id="spamCount">0</h4>
+                        <p>Spam Detected</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4 id="hamCount">0</h4>
+                        <p>Safe Emails</p>
+                    </div>
+                    <div class="stat-card">
+                        <h4>97%</h4>
+                        <p>Model Accuracy</p>
+                    </div>
+                </div>
+
+                <div style="margin-top: 30px;">
+                    <h3 style="color: #667eea; margin-bottom: 15px;">ðŸ”§ Data Flow</h3>
+                    <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; font-size: 0.9em; line-height: 1.8;">
+                        <strong>1.</strong> User Input â†’ Frontend<br>
+                        <strong>2.</strong> Frontend â†’ Flask Backend<br>
+                        <strong>3.</strong> NLP Preprocessing (Tokenization)<br>
+                        <strong>4.</strong> NaÃ¯ve Bayes Classification<br>
+                        <strong>5.</strong> SQLite Database Storage<br>
+                        <strong>6.</strong> Result â†’ Frontend Display
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h2><span class="icon">ðŸ“œ</span> Classification History</h2>
+                <button class="btn-danger" onclick="clearHistory()" style="flex: none; padding: 10px 20px;">
+                    ðŸ—‘ï¸ Clear History
+                </button>
+            </div>
+            
+            <div style="overflow-x: auto;">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Email Content</th>
+                            <th>Classification</th>
+                            <th>Confidence</th>
+                            <th>Timestamp</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyBody">
+                        <tr>
+                            <td colspan="4" style="text-align: center; color: #999; padding: 30px;">
+                                No emails analyzed yet. Start by entering an email above!
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
